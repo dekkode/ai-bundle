@@ -21,7 +21,7 @@
         "php": ">=8.2",
         "symfony/ai-agent": "@dev",
         "symfony/ai-chat": "@dev",
-        "symfony/ai-platform": "@dev",
+        "symfony/ai-platform": "dev-bedrock-support",
         "symfony/ai-store": "@dev",
         "symfony/clock": "^7.3|^8.0",
         "symfony/config": "^7.3|^8.0",
