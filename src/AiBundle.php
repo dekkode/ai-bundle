@@ -53,6 +53,7 @@ use Symfony\AI\Chat\MessageStoreInterface;
 use Symfony\AI\Platform\Bridge\Albert\PlatformFactory as AlbertPlatformFactory;
 use Symfony\AI\Platform\Bridge\Anthropic\PlatformFactory as AnthropicPlatformFactory;
 use Symfony\AI\Platform\Bridge\Azure\OpenAi\PlatformFactory as AzureOpenAiPlatformFactory;
+use Symfony\AI\Platform\Bridge\Bedrock\PlatformFactory as BedrockFactory;
 use Symfony\AI\Platform\Bridge\Cartesia\PlatformFactory as CartesiaPlatformFactory;
 use Symfony\AI\Platform\Bridge\Cerebras\PlatformFactory as CerebrasPlatformFactory;
 use Symfony\AI\Platform\Bridge\Decart\PlatformFactory as DecartPlatformFactory;
@@ -380,11 +381,11 @@ final class AiBundle extends AbstractBundle
         }
 
         if ('azure' === $type) {
-            if (!ContainerBuilder::willBeAvailable('symfony/ai-azure-platform', AzureOpenAiPlatformFactory::class, ['symfony/ai-bundle'])) {
-                throw new RuntimeException('Azure platform configuration requires "symfony/ai-azure-platform" package. Try running "composer require symfony/ai-azure-platform".');
-            }
-
             foreach ($platform as $name => $config) {
+                if (!ContainerBuilder::willBeAvailable('symfony/ai-azure-platform', AzureOpenAiPlatformFactory::class, ['symfony/ai-bundle'])) {
+                    throw new RuntimeException('Azure platform configuration requires "symfony/ai-azure-platform" package. Try running "composer require symfony/ai-azure-platform".');
+                }
+
                 $platformId = 'ai.platform.azure.'.$name;
                 $definition = (new Definition(Platform::class))
                     ->setFactory(AzureOpenAiPlatformFactory::class.'::create')
@@ -401,6 +402,31 @@ final class AiBundle extends AbstractBundle
                         new Reference('event_dispatcher'),
                     ])
                     ->addTag('ai.platform', ['name' => 'azure.'.$name]);
+
+                $container->setDefinition($platformId, $definition);
+            }
+
+            return;
+        }
+
+        if ('bedrock' === $type) {
+            if (!ContainerBuilder::willBeAvailable('symfony/ai-bedrock-platform', BedrockFactory::class, ['symfony/ai-bundle'])) {
+                throw new RuntimeException('Bedrock platform configuration requires "symfony/ai-bedrock-platform" package. Try running "composer require symfony/ai-bedrock-platform".');
+            }
+
+            foreach ($platform as $name => $config) {
+                $platformId = 'ai.platform.bedrock_'.$name;
+                $definition = (new Definition(Platform::class))
+                    ->setFactory(BedrockFactory::class.'::create')
+                    ->setLazy(true)
+                    ->addTag('proxy', ['interface' => PlatformInterface::class])
+                    ->setArguments([
+                        $config['bedrock_runtime_client'] ? new Reference($config['bedrock_runtime_client'], ContainerInterface::NULL_ON_INVALID_REFERENCE) : null,
+                        $config['model_catalog'] ? new Reference($config['model_catalog']) : new Reference('ai.platform.model_catalog.bedrock'),
+                        null,
+                        new Reference('event_dispatcher'),
+                    ])
+                    ->addTag('ai.platform', ['name' => 'bedrock_'.$name]);
 
                 $container->setDefinition($platformId, $definition);
             }
@@ -536,11 +562,11 @@ final class AiBundle extends AbstractBundle
         }
 
         if ('generic' === $type) {
-            if (!ContainerBuilder::willBeAvailable('symfony/ai-generic-platform', GenericPlatformFactory::class, ['symfony/ai-bundle'])) {
-                throw new RuntimeException('Generic platform configuration requires "symfony/ai-generic-platform" package. Try running "composer require symfony/ai-generic-platform".');
-            }
-
             foreach ($platform as $name => $config) {
+                if (!ContainerBuilder::willBeAvailable('symfony/ai-generic-platform', GenericPlatformFactory::class, ['symfony/ai-bundle'])) {
+                    throw new RuntimeException('Generic platform configuration requires "symfony/ai-generic-platform" package. Try running "composer require symfony/ai-generic-platform".');
+                }
+
                 $platformId = 'ai.platform.generic.'.$name;
                 $definition = (new Definition(Platform::class))
                     ->setFactory(GenericPlatformFactory::class.'::create')
